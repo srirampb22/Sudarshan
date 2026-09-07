@@ -1,0 +1,16 @@
+venv/
+venv/
+vectorstore/
+__pycache__/
+sudarshan-results/
+report-tests/
+finetune-dataset/
+*.pdf
+*.docx
+report_*.md
+oci_verify_report.md
+cleart
+vectorstore/
+__pycache__/
+sudarshan-results/
+report-tests/

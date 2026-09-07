@@ -1,0 +1,8 @@
+requests
+ollama
+chromadb
+sqlite-vec
+pypdf
+python-docx
+fpdf2
+rich
