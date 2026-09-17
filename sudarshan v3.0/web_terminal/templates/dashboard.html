@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudarshan // Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #050505;
+            --panel-bg: #0d0d0d;
+            --border-color: #1f1f1f;
+            --accent-gold: #ffaa00;
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff66;
+            --accent-red: #ff4444;
+            --text-main: #e0e0e0;
+            --text-muted: #666;
+        }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+        }
+        .panel-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Stat widgets */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        .stat-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+        }
+        .stat-card .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            line-height: 1;
+        }
+        .stat-card .stat-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+        .stat-card.accent-cyan .stat-value { color: var(--accent-cyan); }
+        .stat-card.accent-gold .stat-value { color: var(--accent-gold); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+            flex-grow: 1;
+        }
+        .btn-launch {
+            display: block;
+            width: 100%;
+            background: rgba(0, 255, 102, 0.1);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        .btn-launch:hover {
+            background: var(--accent-green);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+        }
+        .btn-launch.resume {
+            background: rgba(255, 170, 0, 0.1);
+            color: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+        .btn-launch.resume:hover {
+            background: var(--accent-gold);
+            color: #000;
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+        }
+        .btn-launch.disabled { opacity: 0.4; pointer-events: none; }
+        .capacity-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 0.75rem;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th { color: var(--text-muted); text-transform: uppercase; }
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        .status-completed { background: rgba(0, 255, 102, 0.1); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .status-running { background: rgba(255, 170, 0, 0.1); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+        .action-link {
+            color: var(--accent-gold);
+            text-decoration: none;
+            margin-right: 1rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            padding: 0;
+        }
+        .action-link:hover { text-decoration: underline; }
+        .action-link.danger { color: var(--accent-red); }
+        .empty-row td {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+    {% include "_nav.html" %}
+
+    <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+            <div class="stat-value" id="stat-total-scans">-</div>
+            <div class="stat-label">Total Scans</div>
+        </div>
+        <div class="stat-card accent-cyan">
+            <div class="stat-value" id="stat-active-now">-</div>
+            <div class="stat-label">Active Now</div>
+        </div>
+        <div class="stat-card accent-gold">
+            <div class="stat-value" id="stat-stored">-</div>
+            <div class="stat-label">Stored Results</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-downloads">-</div>
+            <div class="stat-label">Exports</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Quick Actions -->
+        <div class="panel">
+            <h2 class="panel-title">Orchestration</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2rem;" id="launch-desc">
+                Spin up a new bridge to engage target environments and stream telemetry.
+            </p>
+            <a href="/terminal" class="btn-launch" id="launch-btn">Initiate Scan</a>
+            <div class="capacity-note" id="capacity-note"></div>
+        </div>
+
+        <!-- Session History -->
+        <div class="panel">
+            <h2 class="panel-title">Data Archives</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Target Profile</th>
+                        <th>Last Used</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="session-table-body">
+                    <tr class="empty-row"><td colspan="4">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const CURRENT_USER = "{{ username }}";
+        const tbody = document.getElementById('session-table-body');
+        const launchBtn = document.getElementById('launch-btn');
+        const launchDesc = document.getElementById('launch-desc');
+        const capacityNote = document.getElementById('capacity-note');
+
+        function escapeHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str == null ? '' : str;
+            return d.innerHTML;
+        }
+
+        async function loadSessions() {
+            let data;
+            try {
+                const res = await fetch('/api/sessions');
+                if (res.status === 401) { window.location.href = '/login'; return; }
+                data = await res.json();
+            } catch (e) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Could not reach the server.</td></tr>';
+                return;
+            }
+
+            const activeSessions = data.active_sessions || [];
+            const activeCount = activeSessions.length;
+            const maxConcurrent = data.max_concurrent || 1;
+            const myActiveSession = activeSessions.find(s => s.user === CURRENT_USER);
+
+            if (myActiveSession) {
+                // I already have a session running (possibly detached) -
+                // offer to resume it rather than the generic launch button.
+                launchBtn.classList.remove('disabled');
+                launchBtn.classList.add('resume');
+                launchBtn.textContent = myActiveSession.status === 'attached'
+                    ? 'Rejoin Session (Live)'
+                    : 'Resume Session';
+                launchDesc.textContent = 'You have a session already running in the background - jump back in.';
+            } else if (activeCount >= maxConcurrent) {
+                launchBtn.classList.add('disabled');
+                launchBtn.classList.remove('resume');
+                launchBtn.textContent = 'Initiate Scan';
+                launchDesc.textContent = 'Spin up a new bridge to engage target environments and stream telemetry.';
+            } else {
+                launchBtn.classList.remove('disabled');
+                launchBtn.classList.remove('resume');
+                launchBtn.textContent = 'Initiate Scan';
+                launchDesc.textContent = 'Spin up a new bridge to engage target environments and stream telemetry.';
+            }
+            capacityNote.textContent = `${activeCount}/${maxConcurrent} active sessions`;
+
+            // Stat widgets
+            const stats = data.stats || {};
+            document.getElementById('stat-total-scans').textContent = stats.total_scans ?? '-';
+            document.getElementById('stat-active-now').textContent = stats.active_now ?? '-';
+            document.getElementById('stat-stored').textContent = stats.stored_results ?? '-';
+            document.getElementById('stat-downloads').textContent = stats.total_downloads ?? '-';
+
+            const rows = [];
+
+            for (const s of activeSessions) {
+                rows.push(`
+                    <tr>
+                        <td>${escapeHtml(s.user)}'s session</td>
+                        <td>${escapeHtml(s.started_at)}</td>
+                        <td><span class="status-badge status-running">${s.status === 'attached' ? 'LIVE' : 'RUNNING (idle)'}</span></td>
+                        <td>${s.user === CURRENT_USER ? '<a class="action-link" href="/terminal">Resume</a>' : '&mdash;'}</td>
+                    </tr>
+                `);
+            }
+
+            for (const t of (data.completed_targets || [])) {
+                rows.push(`
+                    <tr>
+                        <td>${escapeHtml(t.friendly_name || t.target_name)}</td>
+                        <td>${escapeHtml(t.last_used || '-')}</td>
+                        <td><span class="status-badge status-completed">COMPLETED</span></td>
+                        <td>
+                            <a class="action-link" href="/download/${encodeURIComponent(t.target_name)}">Extract (ZIP)</a>
+                            <button class="action-link danger" onclick="deleteTarget('${t.target_name.replace(/'/g, "\\'")}')">Purge</button>
+                        </td>
+                    </tr>
+                `);
+            }
+
+            tbody.innerHTML = rows.length
+                ? rows.join('')
+                : '<tr class="empty-row"><td colspan="4">No sessions yet. Initiate a scan to get started.</td></tr>';
+        }
+
+        async function deleteTarget(name) {
+            if (!confirm(`Permanently delete results for "${name}"? This cannot be undone.`)) return;
+            try {
+                const res = await fetch(`/api/sessions/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                if (res.status === 401) { window.location.href = '/login'; return; }
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    alert(`Delete failed: ${body.error || res.status}`);
+                    return;
+                }
+            } catch (e) {
+                alert('Delete failed: could not reach the server.');
+                return;
+            }
+            loadSessions();
+        }
+
+        loadSessions();
+        setInterval(loadSessions, 8000);
+    </script>
+</body>
+</html>

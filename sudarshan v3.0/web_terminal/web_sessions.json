@@ -1,0 +1,58 @@
+[
+  {
+    "id": "sess_1_1789551899",
+    "user": "ram",
+    "started_at": "2026-09-16T09:44:59.625775",
+    "ended_at": "2026-09-16T09:45:05.418072",
+    "status": "completed"
+  },
+  {
+    "id": "sess_2_1789551954",
+    "user": "ram",
+    "started_at": "2026-09-16T09:45:54.938937",
+    "ended_at": "2026-09-16T09:46:10.823087",
+    "status": "completed"
+  },
+  {
+    "id": "sess_3_1789551984",
+    "user": "ram",
+    "started_at": "2026-09-16T09:46:24.358445",
+    "ended_at": "2026-09-16T09:46:42.308666",
+    "status": "completed"
+  },
+  {
+    "id": "sess_1_1789552894",
+    "user": "ram",
+    "started_at": "2026-09-16T10:01:34.687939",
+    "ended_at": "2026-09-16T10:02:05.525751",
+    "status": "completed"
+  },
+  {
+    "id": "sess_2_1789553514",
+    "user": "ram",
+    "started_at": "2026-09-16T10:11:54.980415",
+    "ended_at": "2026-09-16T10:12:28.714979",
+    "status": "completed"
+  },
+  {
+    "id": "sess_1_1789613245",
+    "user": "ram",
+    "started_at": "2026-09-17T02:47:25.067738",
+    "ended_at": "2026-09-17T02:47:29.919697",
+    "status": "completed"
+  },
+  {
+    "id": "sess_2_1789613502",
+    "user": "ram",
+    "started_at": "2026-09-17T02:51:42.470247",
+    "ended_at": "2026-09-17T02:57:02.859800",
+    "status": "completed"
+  },
+  {
+    "id": "sess_1_1789614129",
+    "user": "ram",
+    "started_at": "2026-09-17T03:02:09.717102",
+    "ended_at": null,
+    "status": "running"
+  }
+]
