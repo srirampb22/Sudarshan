@@ -1,0 +1,28 @@
+# secrets / local config - NEVER commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# local data produced by the tool
+sudarshan-results/
+vectorstore/
+sudarshan-audit.log
+web_terminal/web_sessions.json
+web_terminal/download_count.json
+*.tmp.md
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+users.json

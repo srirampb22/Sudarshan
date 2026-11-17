@@ -1,0 +1,4 @@
+-r requirements.txt
+-r web_terminal/requirements_web.txt
+pytest
+httpx

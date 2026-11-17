@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudarshan // Terminal</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.9.0/lib/xterm-addon-attach.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #050505;
+            --panel-bg: #0d0d0d;
+            --border-color: #1f1f1f;
+            --text-main: #e0e0e0;
+            --text-muted: #666;
+            --accent-gold: #ffaa00;
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff66;
+            --accent-red: #ff4444;
+            --font-ui: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            margin: 0;
+            padding: 1.5rem;
+            height: 100vh;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 1rem;
+            overflow: hidden;
+        }
+        .session-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+        .session-bar .left { display: flex; align-items: center; gap: 1rem; }
+        .conn-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-gold);
+        }
+        .conn-dot::before {
+            content: '';
+            width: 9px; height: 9px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-gold);
+        }
+        .conn-dot.active { color: var(--accent-green); }
+        .conn-dot.active::before { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+        .session-bar .right { display: flex; align-items: center; gap: 0.75rem; }
+        button.btn-end, button.btn-dl {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        button.btn-end { border-color: var(--accent-red); color: var(--accent-red); }
+        button.btn-end:hover:not(:disabled) { background: rgba(255, 68, 68, 0.1); }
+        button.btn-dl { border-color: var(--accent-cyan); color: var(--accent-cyan); display: none; }
+        button.btn-dl:hover { background: rgba(0, 240, 255, 0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #terminal-container {
+            flex-grow: 1;
+            padding: 1rem;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+    {% include "_nav.html" %}
+
+    <div class="session-bar">
+        <div class="left">
+            <span class="conn-dot" id="conn-status">STANDBY</span>
+            <span style="color: var(--text-muted);">This session belongs only to you - navigating away leaves it running in the background.</span>
+        </div>
+        <div class="right">
+            <button class="btn-dl" id="download-btn">Package Latest Result</button>
+            <button class="btn-end" id="start-end-btn">Start Session</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div id="terminal-container"></div>
+    </div>
+
+    <script>
+        const terminalContainer = document.getElementById('terminal-container');
+        const startEndBtn = document.getElementById('start-end-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const statusBadge = document.getElementById('conn-status');
+
+        let term = null;
+        let fitAddon = null;
+        let ws = null;
+        let attachAddon = null;
+        let sessionActive = false;
+        let currentSessionId = null; // learned from the server's first control frame
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+        function initTerminal() {
+            if (term) term.dispose();
+            term = new Terminal({
+                cursorBlink: true,
+                theme: {
+                    background: '#000000',
+                    foreground: '#e0e0e0',
+                    cursor: '#00ff66',
+                    selectionBackground: 'rgba(0, 255, 102, 0.3)'
+                },
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 13,
+                padding: 15
+            });
+            fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(terminalContainer);
+            fitAddon.fit();
+            window.addEventListener('resize', () => { if (fitAddon) fitAddon.fit(); });
+        }
+
+        function connectWebSocket(resumeSessionId) {
+            const url = resumeSessionId ? `${wsUrl}?session_id=${encodeURIComponent(resumeSessionId)}` : wsUrl;
+            ws = new WebSocket(url);
+            let gotSessionId = false;
+
+            ws.onopen = () => {
+                sessionActive = true;
+                statusBadge.innerText = 'LINK_ACTIVE';
+                statusBadge.classList.add('active');
+                startEndBtn.innerText = 'End Session';
+                startEndBtn.disabled = false;
+                downloadBtn.style.display = 'none';
+                term.focus();
+            };
+
+            // The server always sends one JSON control frame first (which
+            // session_id we're now attached to), before any real pty
+            // output. Read that one manually, then hand the socket over to
+            // xterm's AttachAddon for everything after - loadAddon()
+            // replaces ws.onmessage itself, so this handler naturally
+            // stops being used once the addon takes over.
+            ws.onmessage = (event) => {
+                if (gotSessionId) return;
+                gotSessionId = true;
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg && msg.__sudarshan_session_id) {
+                        currentSessionId = msg.__sudarshan_session_id;
+                        history.replaceState(null, '', `/terminal?session=${encodeURIComponent(currentSessionId)}`);
+                    }
+                } catch (e) {
+                    // Not JSON - unexpected, but don't crash the connection over it
+                }
+                attachAddon = new AttachAddon.AttachAddon(ws);
+                term.loadAddon(attachAddon);
+            };
+
+            ws.onclose = (event) => {
+                sessionActive = false;
+                statusBadge.innerText = 'DISCONNECTED';
+                statusBadge.classList.remove('active');
+                startEndBtn.innerText = 'Start Session';
+                startEndBtn.disabled = false;
+
+                if (event.code === 4429) {
+                    term.write('\r\n\r\n[!] Too many active sessions right now. Try again shortly.\r\n');
+                    return;
+                }
+                if (event.code === 4430) {
+                    term.write('\r\n\r\n[!] Rate limit reached for your account. Try again in a bit.\r\n');
+                    return;
+                }
+
+                term.write('\r\n\r\n[!] Disconnected from the browser side. If a scan was running, ' +
+                           'it is still going in the background - resume it any time from the ' +
+                           'Dashboard\'s Data Archives table.\r\n');
+                prepareDownload();
+            };
+
+            ws.onerror = (err) => console.error('WebSocket Error', err);
+        }
+
+        async function endSessionForReal() {
+            // Explicit "End Session" click - actually kill the process,
+            // unlike a plain disconnect which leaves it running.
+            startEndBtn.disabled = true;
+            startEndBtn.innerText = 'Ending...';
+            try {
+                await fetch('/api/session/end', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId }),
+                });
+            } catch (e) {
+                console.error('Could not reach /api/session/end', e);
+            }
+            // Don't rely solely on ws.onclose to reset the UI - if the
+            // socket is already closed or stale (e.g. a bfcache-restored
+            // page holding a dead reference), the browser will never
+            // re-fire onclose and the button would be stuck on "Ending..."
+            // forever. Reset the UI here directly as the source of truth;
+            // closing the socket (if it's actually still open) is just a
+            // courtesy on top of that, not something the UI waits on.
+            try {
+                if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+                    ws.close();
+                }
+            } catch (e) { /* ignore */ }
+            sessionActive = false;
+            statusBadge.innerText = 'DISCONNECTED';
+            statusBadge.classList.remove('active');
+            startEndBtn.innerText = 'Start Session';
+            startEndBtn.disabled = false;
+            currentSessionId = null;
+            history.replaceState(null, '', '/terminal');
+        }
+
+        async function prepareDownload() {
+            try {
+                const res = await fetch('/api/sessions');
+                const data = await res.json();
+                const targets = data.completed_targets || [];
+                if (targets.length > 0) {
+                    const latest = targets[0]; // already sorted newest-first
+                    downloadBtn.style.display = 'inline-block';
+                    downloadBtn.dataset.target = latest.target_name;
+                    downloadBtn.innerText = `Package "${latest.friendly_name || latest.target_name}"`;
+                }
+            } catch (e) {
+                console.error('Could not load session list for download', e);
+            }
+        }
+
+        startEndBtn.addEventListener('click', () => {
+            if (sessionActive) {
+                endSessionForReal();
+                return;
+            }
+            initTerminal();
+            startEndBtn.disabled = true;
+            startEndBtn.innerText = 'Connecting...';
+            connectWebSocket(null); // the button always starts a fresh session
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const target = downloadBtn.dataset.target;
+            if (target) window.location.href = `/download/${encodeURIComponent(target)}`;
+        });
+
+        // Only reattach automatically if the URL explicitly names a
+        // session (came from Data Archives' "Resume" link, or a refresh
+        // of a tab that was already attached to one). Otherwise just wait
+        // for "Start Session" - with multiple sessions possible per user,
+        // there's no longer a single implicit one to guess.
+        const urlSessionId = new URLSearchParams(window.location.search).get('session');
+        initTerminal();
+        if (urlSessionId) {
+            term.write('System standing by. Reattaching to your session...\r\n');
+            startEndBtn.disabled = true;
+            startEndBtn.innerText = 'Reattaching...';
+            connectWebSocket(urlSessionId);
+        } else {
+            term.write('System standing by. Click "Start Session" to begin.\r\n');
+        }
+
+        // Browser back/forward-cache (bfcache) can restore this exact page
+        // WITHOUT re-running any of the script above, reusing whatever
+        // `ws`/`term` objects existed before the user navigated away. If
+        // that old `ws` was already closed, every button on the restored
+        // page silently does nothing useful (End Session can look like it
+        // hangs forever, since the stale socket's onclose already fired
+        // once and will never fire again). Forcing a real reload on a
+        // bfcache restore sidesteps the whole class of stale-state bugs.
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
