@@ -20,7 +20,7 @@ Its core design rule is **hallucination resistance**: every claim in the AI-writ
 ## Quick start
 
 ```bash
-git clone <this-repo-url> sudarshan
+git clone https://github.com/srirampb22/Sudarshan sudarshan
 cd sudarshan
 bash setup.sh        # one time: tools, Ollama, a model that fits your machine, Python env
 bash run.sh          # starts the web UI and opens your browser
